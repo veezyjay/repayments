@@ -23,6 +23,12 @@ public class ExceptionsHandler {
     }
 
     @ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentsException(IllegalArgumentException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
