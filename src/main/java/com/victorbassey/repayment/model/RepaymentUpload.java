@@ -17,6 +17,20 @@ public class RepaymentUpload {
     private LocalDate date;
     private Long amount;
 
+    public RepaymentUpload() {
+    }
+
+    public RepaymentUpload(Long customerId, Long amount) {
+        this.customerId = customerId;
+        this.amount = amount;
+    }
+
+    public RepaymentUpload(Long customerId, Long amount, Long seasonId) {
+        this.customerId = customerId;
+        this.seasonId = seasonId;
+        this.amount = amount;
+    }
+
     public Long getId() {
         return id;
     }
