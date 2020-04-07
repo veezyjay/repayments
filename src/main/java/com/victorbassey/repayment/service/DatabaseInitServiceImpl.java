@@ -38,6 +38,10 @@ public class DatabaseInitServiceImpl implements DatabaseInitService {
         this.repaymentUploadRepository = repaymentUploadRepository;
     }
 
+    /**
+     * Loads the initial sample data from data.json into the database
+     * This method runs when the application is just starting
+     */
     @Override
     @PostConstruct
     public void loadDataIntoDB() {
