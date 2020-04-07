@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/repayments_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: hbstudent
+    password: hbstudent
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    database: mysql
