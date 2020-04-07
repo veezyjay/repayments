@@ -39,9 +39,14 @@ public class RepaymentServiceImpl implements RepaymentService {
      */
     @Override
     public ProposedChanges getCustomerSummaryForUpdate(Long customerId, Long amount, Long seasonId) {
+        if (customerId < 1 || amount < 1 ) {
+            throw new IllegalArgumentException("customer ID and amount must both be greater than zero");
+        }
+
         ProposedChanges proposedChanges = new ProposedChanges();
 
         if (seasonId != null && seasonId != 0) {
+            if (seasonId < 0) throw new IllegalArgumentException("season ID must be a positive number");
             setProposedChangesForOverride(customerId, amount, seasonId, proposedChanges);
         } else {
             List<CustomerSummary> summariesWithDebts = customerSummaryRepository
