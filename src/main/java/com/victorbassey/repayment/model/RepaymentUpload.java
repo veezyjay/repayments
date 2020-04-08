@@ -4,6 +4,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 @Entity
@@ -12,9 +14,17 @@ public class RepaymentUpload {
     @Id
     @GeneratedValue
     private Long id;
+
+    @NotNull(message = "Customer ID is required")
+    @Min(value = 1, message = "Customer ID must be positive")
     private Long customerId;
+
+    @Min(value = 0, message = "Season ID must not be negative")
     private Long seasonId;
     private LocalDate date;
+
+    @NotNull(message = "Amount is required")
+    @Min(value = 1, message = "Amount must be positive")
     private Long amount;
 
     public RepaymentUpload() {
