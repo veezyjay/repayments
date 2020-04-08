@@ -1,6 +1,8 @@
 package com.victorbassey.repayment.exception;
 
 import com.victorbassey.repayment.payload.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,9 +22,12 @@ import java.util.Set;
 @ControllerAdvice
 public class ExceptionsHandler {
 
+    private Logger logger = LoggerFactory.getLogger(ExceptionsHandler.class);
+
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
+        logger.error(e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
@@ -41,19 +46,21 @@ public class ExceptionsHandler {
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleInvalidParamsException(MethodArgumentTypeMismatchException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        logger.error(e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleInvalidRequestBody(HttpMessageNotReadableException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, "Required request body is missing");
+        logger.error(response.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException e) {
         Set<ConstraintViolation<?>> violations = e.getConstraintViolations();
-        String errorMessage = "";
+        String errorMessage;
         if (!violations.isEmpty()) {
             StringBuilder builder = new StringBuilder();
             violations.forEach(violation -> builder.append(". ").append(violation.getMessage()));
@@ -62,24 +69,28 @@ public class ExceptionsHandler {
             errorMessage = "ConstraintViolationException occurred.";
         }
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+        logger.error(errorMessage);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleIllegalArgumentsException(IllegalArgumentException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        logger.error(e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleMissingRequestParameter(MissingServletRequestParameterException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        logger.error(e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        logger.error(e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
