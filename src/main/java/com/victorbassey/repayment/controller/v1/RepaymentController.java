@@ -5,6 +5,7 @@ import com.victorbassey.repayment.payload.ProposedChanges;
 import com.victorbassey.repayment.payload.RepaymentData;
 import com.victorbassey.repayment.payload.ResponseTemplate;
 import com.victorbassey.repayment.service.RepaymentService;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,7 @@ public class RepaymentController {
     }
 
     @GetMapping("/proposed-changes")
+    @ApiOperation(value = "Gets the changes to the customer summaries that would occur when a user proceeds with the repayment", httpMethod = "GET")
     @ResponseStatus(HttpStatus.OK)
     public ResponseTemplate<ProposedChanges> getProposedChanges(@Min(value = 1, message = "Customer ID must be positive")
                                                                     @RequestParam Long customerId,
@@ -37,6 +39,7 @@ public class RepaymentController {
     }
 
     @PostMapping("/repay")
+    @ApiOperation(value = "Adds new repayments and updates the associated customer summaries", httpMethod = "POST")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseTemplate<List<RepaymentData>> repayDebts
             (@RequestBody @NotEmpty(message = "List of repayment upload cannot be empty")

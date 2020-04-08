@@ -3,6 +3,7 @@ package com.victorbassey.repayment.controller.v1;
 import com.victorbassey.repayment.model.Season;
 import com.victorbassey.repayment.payload.ResponseTemplate;
 import com.victorbassey.repayment.service.SeasonService;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,7 @@ public class SeasonController {
     }
 
     @GetMapping
+    @ApiOperation(value = "Retrieves all seasons from the database", httpMethod = "GET")
     @ResponseStatus(HttpStatus.OK)
     public ResponseTemplate<List<Season>> getSeasons() {
         List<Season> allSeasons = seasonService.getAllSeasons();
