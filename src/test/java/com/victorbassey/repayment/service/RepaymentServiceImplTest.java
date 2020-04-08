@@ -2,8 +2,13 @@ package com.victorbassey.repayment.service;
 
 import com.victorbassey.repayment.exception.ResourceNotFoundException;
 import com.victorbassey.repayment.model.CustomerSummary;
+import com.victorbassey.repayment.model.Repayment;
+import com.victorbassey.repayment.model.RepaymentUpload;
 import com.victorbassey.repayment.payload.ProposedChanges;
+import com.victorbassey.repayment.payload.RepaymentData;
 import com.victorbassey.repayment.repository.CustomerSummaryRepository;
+import com.victorbassey.repayment.repository.RepaymentRepository;
+import com.victorbassey.repayment.repository.RepaymentUploadRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +30,12 @@ class RepaymentServiceImplTest {
 
     @Mock
     CustomerSummaryRepository customerSummaryRepository;
+
+    @Mock
+    RepaymentRepository repaymentRepository;
+
+    @Mock
+    RepaymentUploadRepository repaymentUploadRepository;
 
     @InjectMocks
     RepaymentServiceImpl repaymentService;
@@ -142,6 +154,190 @@ class RepaymentServiceImplTest {
 
         assertThrows(ResourceNotFoundException.class, () -> repaymentService
                 .getCustomerSummaryForUpdate(1000L, 300L, 110L));
+
+    }
+
+    @Test
+    void repayDebtsForOverrideSingleUploadInList() {
+        RepaymentUpload repaymentUpload = new RepaymentUpload(4L, 400L, 180L);
+        List<RepaymentUpload> uploads = new ArrayList<>();
+        uploads.add(repaymentUpload);
+        CustomerSummary summary = new CustomerSummary();
+        summary.setCustomerId(4L);
+        summary.setTotalRepaid(6200L);
+        summary.setTotalCredit(7200L);
+        summary.setSeasonId(180L);
+        Repayment repayment = new Repayment(4L, 180L, 400L);
+
+        when(customerSummaryRepository.findByCustomerIdAndSeasonId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(summary));
+        when(customerSummaryRepository.save(any())).thenReturn(summary);
+        when(repaymentRepository.save(any())).thenReturn(repayment);
+        when(repaymentUploadRepository.save(any())).thenReturn(repaymentUpload);
+
+        List<RepaymentData> repaymentData = repaymentService.repayDebts(uploads);
+        assertEquals(1, repaymentData.size());
+        assertNotNull(repaymentData.get(0).getOriginalRepayment());
+        assertNotNull(repaymentData.get(0).getUpdatedSummaries());
+        assertNull(repaymentData.get(0).getAdjustmentRepayments());
+        assertEquals(400L, repaymentData.get(0).getOriginalRepayment().getAmount());
+    }
+
+    @Test
+    void repayDebtsForOverpaidSingleUploadInList() {
+        RepaymentUpload repaymentUpload = new RepaymentUpload(4L, 300L, 0L);
+        List<RepaymentUpload> uploads = new ArrayList<>();
+        uploads.add(repaymentUpload);
+        CustomerSummary summary = new CustomerSummary();
+        summary.setCustomerId(4L);
+        summary.setTotalRepaid(6200L);
+        summary.setTotalCredit(7200L);
+        summary.setSeasonId(180L);
+        Repayment repayment = new Repayment(4L, 150L, 300L);
+
+        when(customerSummaryRepository.findCustomerSummariesWithDebts(anyLong()))
+                .thenReturn(Collections.emptyList());
+        when(customerSummaryRepository.findMostRecentCustomerSummary(anyLong()))
+                .thenReturn(Optional.of(summary));
+        when(customerSummaryRepository.save(any())).thenReturn(summary);
+        when(repaymentRepository.save(any())).thenReturn(repayment);
+        when(repaymentUploadRepository.save(any())).thenReturn(repaymentUpload);
+
+        List<RepaymentData> repaymentData = repaymentService.repayDebts(uploads);
+        assertEquals(1, repaymentData.size());
+        assertNotNull(repaymentData.get(0).getOriginalRepayment());
+        assertNotNull(repaymentData.get(0).getUpdatedSummaries());
+        assertNull(repaymentData.get(0).getAdjustmentRepayments());
+        assertEquals(300L, repaymentData.get(0).getOriginalRepayment().getAmount());
+    }
+
+    @Test
+    void repayDebtsForCascadeSingleUploadInListWithLargeAmount() {
+        RepaymentUpload repaymentUpload = new RepaymentUpload(4L, 2500L, 0L);
+        List<RepaymentUpload> uploads = new ArrayList<>();
+        uploads.add(repaymentUpload);
+        CustomerSummary summary1 = new CustomerSummary();
+        summary1.setCustomerId(4L);
+        summary1.setTotalRepaid(6200L);
+        summary1.setTotalCredit(7200L);
+        summary1.setSeasonId(180L);
+        CustomerSummary summary2 = new CustomerSummary();
+        summary2.setCustomerId(4L);
+        summary2.setTotalRepaid(4000L);
+        summary2.setTotalCredit(4500L);
+        summary2.setSeasonId(180L);
+        CustomerSummary summary3 = new CustomerSummary();
+        summary3.setCustomerId(4L);
+        summary3.setTotalRepaid(900L);
+        summary3.setTotalCredit(1500L);
+        summary3.setSeasonId(180L);
+        Repayment repayment = new Repayment(4L, 150L, 2500L);
+
+        when(customerSummaryRepository.findCustomerSummariesWithDebts(anyLong()))
+                .thenReturn(List.of(summary1, summary2, summary3));
+        when(customerSummaryRepository.save(any())).thenReturn(summary1);
+        when(repaymentRepository.save(any())).thenReturn(repayment);
+        when(repaymentUploadRepository.save(any())).thenReturn(repaymentUpload);
+
+        List<RepaymentData> repaymentData = repaymentService.repayDebts(uploads);
+        assertEquals(1, repaymentData.size());
+        assertNotNull(repaymentData.get(0).getOriginalRepayment());
+        assertNotNull(repaymentData.get(0).getUpdatedSummaries());
+        assertNotNull(repaymentData.get(0).getAdjustmentRepayments());
+        assertEquals(2, repaymentData.get(0).getAdjustmentRepayments().size());
+        assertEquals(2500L, repaymentData.get(0).getOriginalRepayment().getAmount());
+    }
+
+    @Test
+    void repayDebtsForCascadeSingleUploadInListWithLittleAmount() {
+        RepaymentUpload repaymentUpload = new RepaymentUpload(4L, 300L, 0L);
+        List<RepaymentUpload> uploads = new ArrayList<>();
+        uploads.add(repaymentUpload);
+        CustomerSummary summary1 = new CustomerSummary();
+        summary1.setCustomerId(4L);
+        summary1.setTotalRepaid(6200L);
+        summary1.setTotalCredit(7200L);
+        summary1.setSeasonId(180L);
+        CustomerSummary summary2 = new CustomerSummary();
+        summary2.setCustomerId(4L);
+        summary2.setTotalRepaid(4000L);
+        summary2.setTotalCredit(4500L);
+        summary2.setSeasonId(180L);
+        Repayment repayment = new Repayment(4L, 150L, 300L);
+
+        when(customerSummaryRepository.findCustomerSummariesWithDebts(anyLong()))
+                .thenReturn(List.of(summary1, summary2));
+        when(customerSummaryRepository.save(any())).thenReturn(summary1);
+        when(repaymentRepository.save(any())).thenReturn(repayment);
+        when(repaymentUploadRepository.save(any())).thenReturn(repaymentUpload);
+
+        List<RepaymentData> repaymentData = repaymentService.repayDebts(uploads);
+        assertEquals(1, repaymentData.size());
+        assertNotNull(repaymentData.get(0).getOriginalRepayment());
+        assertNotNull(repaymentData.get(0).getUpdatedSummaries());
+        assertNull(repaymentData.get(0).getAdjustmentRepayments());
+        assertEquals(300L, repaymentData.get(0).getOriginalRepayment().getAmount());
+    }
+
+    @Test
+    void repayDebtsForCascadeMultipleUploadInList() {
+        RepaymentUpload upload1 = new RepaymentUpload(4L, 4300L, 0L);
+        RepaymentUpload upload2 = new RepaymentUpload(2L, 300L, 0L);
+        RepaymentUpload upload3 = new RepaymentUpload(1L, 500L, 110L);
+        List<RepaymentUpload> uploads = List.of(upload1, upload2, upload3);
+        CustomerSummary summary1 = new CustomerSummary();
+        summary1.setCustomerId(4L);
+        summary1.setTotalRepaid(6200L);
+        summary1.setTotalCredit(7200L);
+        summary1.setSeasonId(180L);
+        CustomerSummary summary2 = new CustomerSummary();
+        summary2.setCustomerId(4L);
+        summary2.setTotalRepaid(4000L);
+        summary2.setTotalCredit(4500L);
+        summary2.setSeasonId(180L);
+        CustomerSummary summary3 = new CustomerSummary();
+        summary3.setCustomerId(1L);
+        summary3.setTotalRepaid(900L);
+        summary3.setTotalCredit(1500L);
+        summary3.setSeasonId(150L);
+        Repayment repayment = new Repayment(4L, 150L, 300L);
+
+        // for override
+        when(customerSummaryRepository.findByCustomerIdAndSeasonId(1L, 110L))
+                .thenReturn(Optional.of(summary3));
+        // for cascade
+        when(customerSummaryRepository.findCustomerSummariesWithDebts(4L))
+                .thenReturn(List.of(summary1, summary2));
+        // for overpaid
+        when(customerSummaryRepository.findCustomerSummariesWithDebts(2L))
+                .thenReturn(Collections.emptyList());
+        when(customerSummaryRepository.findMostRecentCustomerSummary(anyLong()))
+                .thenReturn(Optional.of(summary1));
+
+        when(customerSummaryRepository.save(any())).thenReturn(summary1);
+        when(repaymentRepository.save(any())).thenReturn(repayment);
+        when(repaymentUploadRepository.save(any())).thenReturn(upload1);
+
+
+
+        List<RepaymentData> repaymentData = repaymentService.repayDebts(uploads);
+        assertEquals(3, repaymentData.size());
+        for (int i = 0; i < 3; i++) {
+            assertNotNull(repaymentData.get(0).getOriginalRepayment());
+            assertNotNull(repaymentData.get(0).getUpdatedSummaries());
+        }
+        // Check that the cascade payment produces adjustment repayments
+        assertNotNull(repaymentData.get(0).getAdjustmentRepayments());
+        // Check that the overpaid payment does not produce adjustment repayments
+        assertNull(repaymentData.get(1).getAdjustmentRepayments());
+        // Check that the override payment does not produce adjustment repayments
+        assertNull(repaymentData.get(2).getAdjustmentRepayments());
+    }
+
+    @Test
+    void throwErrorWhenArgumentsAreInvalid() {
+        assertThrows(IllegalArgumentException.class, () -> repaymentService
+                .getCustomerSummaryForUpdate(10L, -300L, 110L));
 
     }
 
