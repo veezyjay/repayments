@@ -2,22 +2,33 @@ package com.victorbassey.repayment.service;
 
 import com.victorbassey.repayment.exception.ResourceNotFoundException;
 import com.victorbassey.repayment.model.CustomerSummary;
+import com.victorbassey.repayment.model.Repayment;
 import com.victorbassey.repayment.model.RepaymentUpload;
 import com.victorbassey.repayment.payload.ProposedChanges;
 import com.victorbassey.repayment.payload.RepaymentData;
 import com.victorbassey.repayment.payload.SummaryToUpdate;
 import com.victorbassey.repayment.repository.CustomerSummaryRepository;
+import com.victorbassey.repayment.repository.RepaymentRepository;
+import com.victorbassey.repayment.repository.RepaymentUploadRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class RepaymentServiceImpl implements RepaymentService {
 
     private CustomerSummaryRepository customerSummaryRepository;
+    private RepaymentRepository repaymentRepository;
+    private RepaymentUploadRepository repaymentUploadRepository;
 
-    public RepaymentServiceImpl(CustomerSummaryRepository customerSummaryRepository) {
+    public RepaymentServiceImpl(CustomerSummaryRepository customerSummaryRepository,
+                                RepaymentRepository repaymentRepository,
+                                RepaymentUploadRepository repaymentUploadRepository) {
         this.customerSummaryRepository = customerSummaryRepository;
+        this.repaymentRepository = repaymentRepository;
+        this.repaymentUploadRepository = repaymentUploadRepository;
     }
 
     /**
@@ -26,8 +37,104 @@ public class RepaymentServiceImpl implements RepaymentService {
      * @return list of repayments with their respective adjustment repayments
      */
     @Override
+    @Transactional
     public List<RepaymentData> repayDebts(List<RepaymentUpload> repaymentUploads) {
-        return null;
+        List<RepaymentData> allRepayments = new ArrayList<>();
+
+        for (RepaymentUpload upload : repaymentUploads) {
+            Long customerId = upload.getCustomerId();
+            Long seasonId = upload.getSeasonId();
+            Long amount = upload.getAmount();
+
+            if (customerId < 1 || amount < 1) {
+                throw new IllegalArgumentException("Customer ID and amount most both be positive");
+            }
+
+            // Override logic is contained in the following block
+            if (seasonId != null && seasonId != 0) {
+                if (seasonId < 0) throw new IllegalArgumentException("season ID must not be negative");
+                CustomerSummary summary = customerSummaryRepository.findByCustomerIdAndSeasonId(customerId, seasonId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Customer summary does not exist"));
+                summary.setTotalRepaid(summary.getTotalRepaid() + amount);
+                Repayment newRepayment = repaymentRepository.save(new Repayment(customerId, seasonId, amount));
+                CustomerSummary updatedSummary = customerSummaryRepository.save(summary);
+                RepaymentData currentRepaymentData = new RepaymentData(newRepayment);
+                currentRepaymentData.getUpdatedSummaries().add(updatedSummary);
+                allRepayments.add(currentRepaymentData);
+                repaymentUploadRepository.save(upload);
+
+            } else {
+                List<CustomerSummary> summariesWithDebts = customerSummaryRepository
+                        .findCustomerSummariesWithDebts(customerId);
+
+                // Overpaid logic is contained in the following block
+                if (summariesWithDebts.isEmpty()) {
+                    CustomerSummary mostRecentSeasonSummary = customerSummaryRepository
+                            .findMostRecentCustomerSummary(customerId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Customer summary does not exist"));
+                    mostRecentSeasonSummary.setTotalRepaid(mostRecentSeasonSummary.getTotalRepaid() + amount);
+                    Repayment newRepayment = repaymentRepository.save(new Repayment(customerId, seasonId, amount));
+                    CustomerSummary updatedSummary = customerSummaryRepository.save(mostRecentSeasonSummary);
+                    RepaymentData currentRepaymentData = new RepaymentData(newRepayment);
+                    currentRepaymentData.getUpdatedSummaries().add(updatedSummary);
+                    allRepayments.add(currentRepaymentData);
+                    repaymentUploadRepository.save(upload);
+
+                // Cascade logic is contained in the following block
+                } else {
+                    long balance = amount;
+                    Long parentId = null;
+                    RepaymentData currentRepaymentData = new RepaymentData();
+                    for (int i = 0; i < summariesWithDebts.size(); i++) {
+                        CustomerSummary currentSummary = summariesWithDebts.get(i);
+                        long debt = currentSummary.getTotalCredit() - currentSummary.getTotalRepaid();
+                        currentSummary.setTotalRepaid(currentSummary.getTotalRepaid() + balance);
+                        Repayment repayment = new Repayment(customerId, currentSummary.getSeasonId(), balance);
+                        if (parentId != null) {
+                            repayment.setParentId(parentId);
+                        }
+                        Repayment savedRepayment = repaymentRepository.save(repayment);
+                        if (savedRepayment.getParentId() == null) {
+                            currentRepaymentData.setOriginalRepayment(savedRepayment);
+                        } else {
+                            currentRepaymentData.getAdjustmentRepayments().add(savedRepayment);
+                        }
+                        balance -= debt;
+                        if (balance <= 0) {
+                            CustomerSummary updatedSummary = customerSummaryRepository.save(currentSummary);
+                            if (currentRepaymentData.getUpdatedSummaries() == null) {
+                                currentRepaymentData.setUpdatedSummaries(new ArrayList<>());
+                            }
+                            currentRepaymentData.getUpdatedSummaries().add(updatedSummary);
+                            break;
+                        }
+
+                        if (currentSummary.getTotalRepaid() > currentSummary.getTotalCredit()
+                                && i != summariesWithDebts.size() - 1) {
+                            currentSummary.setTotalRepaid(currentSummary.getTotalRepaid() - balance);
+                            Repayment newRepayment = new Repayment(customerId, currentSummary.getSeasonId(),
+                                    balance * -1);
+                            parentId = savedRepayment.getRepaymentId();
+                            newRepayment.setParentId(parentId);
+                            Repayment theRepayment = repaymentRepository.save(newRepayment);
+                            if (currentRepaymentData.getAdjustmentRepayments() == null) {
+                                currentRepaymentData.setAdjustmentRepayments(new ArrayList<>());
+                            }
+                            currentRepaymentData.getAdjustmentRepayments().add(theRepayment);
+                        }
+                        CustomerSummary updatedSummary = customerSummaryRepository.save(currentSummary);
+                        if (currentRepaymentData.getUpdatedSummaries() == null) {
+                            currentRepaymentData.setUpdatedSummaries(new ArrayList<>());
+                        }
+                        currentRepaymentData.getUpdatedSummaries().add(updatedSummary);
+                    }
+                    allRepayments.add(currentRepaymentData);
+                    repaymentUploadRepository.save(upload);
+                }
+            }
+        }
+
+        return allRepayments;
     }
 
     /**
@@ -46,7 +153,7 @@ public class RepaymentServiceImpl implements RepaymentService {
         ProposedChanges proposedChanges = new ProposedChanges();
 
         if (seasonId != null && seasonId != 0) {
-            if (seasonId < 0) throw new IllegalArgumentException("season ID must be a positive number");
+            if (seasonId < 0) throw new IllegalArgumentException("season ID must not be negative");
             setProposedChangesForOverride(customerId, amount, seasonId, proposedChanges);
         } else {
             List<CustomerSummary> summariesWithDebts = customerSummaryRepository
