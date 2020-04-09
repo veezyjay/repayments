@@ -1,5 +1,7 @@
 package com.victorbassey.repayment.model;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -18,6 +20,8 @@ public class RepaymentUpload {
 
     @Min(value = 0, message = "Season ID must not be negative")
     private Long seasonId;
+
+    @CreationTimestamp
     private LocalDate date;
 
     @NotNull(message = "Amount is required")
