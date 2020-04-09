@@ -1,0 +1,27 @@
+{
+  "files": {
+    "main.css": "/static/css/main.9e4b90b0.chunk.css",
+    "main.js": "/static/js/main.071564f5.chunk.js",
+    "main.js.map": "/static/js/main.071564f5.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.90d40847.js",
+    "runtime-main.js.map": "/static/js/runtime-main.90d40847.js.map",
+    "static/css/2.1cbea75e.chunk.css": "/static/css/2.1cbea75e.chunk.css",
+    "static/js/2.52064d57.chunk.js": "/static/js/2.52064d57.chunk.js",
+    "static/js/2.52064d57.chunk.js.map": "/static/js/2.52064d57.chunk.js.map",
+    "index.html": "/index.html",
+    "precache-manifest.05de348f2731ac83caa42ae4586ec51c.js": "/precache-manifest.05de348f2731ac83caa42ae4586ec51c.js",
+    "service-worker.js": "/service-worker.js",
+    "static/css/2.1cbea75e.chunk.css.map": "/static/css/2.1cbea75e.chunk.css.map",
+    "static/css/main.9e4b90b0.chunk.css.map": "/static/css/main.9e4b90b0.chunk.css.map",
+    "static/js/2.52064d57.chunk.js.LICENSE.txt": "/static/js/2.52064d57.chunk.js.LICENSE.txt",
+    "static/media/App.css": "/static/media/farms1.ca0876b0.jpg",
+    "static/media/logo.svg": "/static/media/logo.b1ce103d.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.90d40847.js",
+    "static/css/2.1cbea75e.chunk.css",
+    "static/js/2.52064d57.chunk.js",
+    "static/css/main.9e4b90b0.chunk.css",
+    "static/js/main.071564f5.chunk.js"
+  ]
+}
