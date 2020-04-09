@@ -63,9 +63,9 @@ public class DatabaseInitServiceImpl implements DatabaseInitService {
 
             customerSummaries.forEach(customerSummaryObj -> customerSummaryRepository
                     .save(getCustomerSummaryFromObject((JSONObject) customerSummaryObj)));
-
-            repaymentUploads.forEach(repaymentUploadObj -> repaymentUploadRepository
-                    .save(getRepaymentUploadFromObject((JSONObject) repaymentUploadObj)));
+// Uncomment this line to add the repayment uploads to the database too
+//            repaymentUploads.forEach(repaymentUploadObj -> repaymentUploadRepository
+//                    .save(getRepaymentUploadFromObject((JSONObject) repaymentUploadObj)));
 
         } catch (IOException | ParseException e) {
             e.printStackTrace();
