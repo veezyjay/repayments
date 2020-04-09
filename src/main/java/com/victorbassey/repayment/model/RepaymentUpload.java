@@ -1,9 +1,6 @@
 package com.victorbassey.repayment.model;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -12,7 +9,7 @@ import java.time.LocalDate;
 @Table(name = "repayment_uploads")
 public class RepaymentUpload {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Customer ID is required")

@@ -2,17 +2,14 @@ package com.victorbassey.repayment.model;
 
 import org.hibernate.annotations.CreationTimestamp;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "repayments")
 public class Repayment {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long repaymentId;
     private Long customerId;
     private Long seasonId;
